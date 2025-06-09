@@ -1,0 +1,24 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+        "name": "_python with env",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        //"module": "examples.compile_efficientnet",
+        //"module": "pytest",
+        "console": "integratedTerminal",
+        "justMyCode": false,
+        //"args": [
+            //"--fp16",
+        //],
+        //"env": {
+            //"PYTHONPATH": "${workspaceFolder}",
+        //}
+    },
+  ]
+}

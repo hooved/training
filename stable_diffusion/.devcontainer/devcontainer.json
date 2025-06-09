@@ -1,0 +1,32 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/docker-existing-dockerfile
+{
+	"name": "Stable Diffusion DevContainer",
+
+  // 1. Use your prebuilt image instead of building one
+  "image": "mlperf/stable_diffusion",
+
+  // 2. Any extra docker flags you need:
+  "runArgs": [
+    "--gpus=all",
+    "--ipc=host"
+  ],
+
+  //"workspaceFolder": "/pwd",
+  //"workspaceMount": "source=${localWorkspaceFolder},target=/pwd,type=bind,consistency=cached",
+
+  // 3. All your -v mounts
+  "mounts": [
+    // mount the project root at /pwd
+    "source=${localWorkspaceFolder},target=/pwd,type=bind,consistency=cached",
+
+    // mount your datasets & other dirs
+    "source=${localWorkspaceFolder}/datasets/laion-400m,target=/datasets/laion-400m,type=bind",
+    "source=${localWorkspaceFolder}/datasets/coco2014,target=/datasets/coco2014,type=bind",
+    "source=${localWorkspaceFolder}/checkpoints,target=/checkpoints,type=bind",
+    "source=${localWorkspaceFolder}/results,target=/results,type=bind"
+  ]
+
+  // 4. Tell VS Code where your code “lives” in the container
+  //"workspaceFolder": "/pwd"
+}
