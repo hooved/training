@@ -20,5 +20,28 @@
             //"PYTHONPATH": "${workspaceFolder}",
         //}
     },
+    {
+      "name": "main",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "HF_DATASETS_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "DIFFUSERS_OFFLINE": "1",
+        "HF_HOME": "${workspaceFolder}/hf_home"
+      },
+      "args": [
+        "lightning.trainer.num_nodes=1",
+        "lightning.trainer.devices=1",
+        "-m", "train",
+        "--ckpt",   "/checkpoints/sd/512-base-ema.ckpt",
+        "--logdir", "/results",
+        "-b",       "./configs/train_01x01x01.yaml"
+      ]
+    }
   ]
 }

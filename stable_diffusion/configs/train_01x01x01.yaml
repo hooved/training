@@ -42,7 +42,9 @@ model:
       clip:
         enabled: True
         clip_version: "ViT-H-14"
-        cache_dir: /checkpoints/clip
+        #clip_version: "/checkpoints/clip/open_clip_pytorch_model.bin"
+        #cache_dir: /checkpoints/clip
+        cache_dir: /checkpoints/clip/
 
     scheduler_config:
       target: ldm.lr_scheduler.LambdaLinearScheduler
@@ -99,10 +101,11 @@ model:
       target: ldm.modules.encoders.modules.FrozenOpenCLIPEmbedder
       params:
         arch: "ViT-H-14"
-        version: "laion2b_s32b_b79k"
+        #version: "laion2b_s32b_b79k"
+        version: "/checkpoints/clip/open_clip_pytorch_model.bin"
         freeze: True
         layer: "penultimate"
-        cache_dir: /checkpoints/clip
+        cache_dir: /checkpoints/clip/
 
 data:
     target: ldm.data.composable_data_module.ComposableDataModule

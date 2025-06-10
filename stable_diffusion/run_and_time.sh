@@ -1,10 +1,12 @@
 #!/bin/bash
 
 : "${NUM_NODES:=1}"
-: "${GPUS_PER_NODE:=8}"
+#: "${GPUS_PER_NODE:=8}"
+: "${GPUS_PER_NODE:=1}"
 : "${CHECKPOINT:=/checkpoints/sd/512-base-ema.ckpt}"
 : "${RESULTS_DIR:=}"
-: "${CONFIG:=./configs/train_01x08x08.yaml}"
+#: "${CONFIG:=./configs/train_01x08x08.yaml}"
+: "${CONFIG:=./configs/train_01x01x01.yaml}"
 
 while [ "$1" != "" ]; do
     case $1 in
