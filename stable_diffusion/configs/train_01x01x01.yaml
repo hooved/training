@@ -22,6 +22,7 @@ model:
     load_vae: True
     load_unet: False
     load_encoder: True
+    sampler_device: "cpu"
 
     validation_config:
       sampler: "ddim" # plms, ddim, dpm
@@ -102,6 +103,7 @@ model:
       params:
         arch: "ViT-H-14"
         #version: "laion2b_s32b_b79k"
+        device: "cpu"
         version: "/checkpoints/clip/open_clip_pytorch_model.bin"
         freeze: True
         layer: "penultimate"
@@ -136,7 +138,8 @@ data:
 
 lightning:
   trainer:
-    accelerator: 'gpu'
+    #accelerator: 'gpu'
+    accelerator: 'cpu'
     num_nodes: 1
     #devices: 8
     devices: 1
