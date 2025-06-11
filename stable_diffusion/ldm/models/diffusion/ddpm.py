@@ -101,7 +101,8 @@ class DDPM(pl.LightningModule):
                  ucg_training=None,
                  reset_ema=False,
                  reset_num_ema_updates=False,
-                 validation_config=None):
+                 validation_config=None,
+                 sampler_device="cuda"):
         super().__init__()
         assert parameterization in ["eps", "x0", "v"], 'currently only supporting "eps" and "x0" and "v"'
         self.parameterization = parameterization
@@ -197,7 +198,7 @@ class DDPM(pl.LightningModule):
             elif validation_config["sampler"] == "dpm":
                 self.sampler = DPMSolverSampler(self)
             elif validation_config["sampler"] == "ddim":
-                self.sampler = DDIMSampler(self)
+                self.sampler = DDIMSampler(self, device=sampler_device)
             else:
                 raise NotImplementedError(f"Sampler {self.sampler} not yet supported")
             self.validation_sampler_steps = validation_config["steps"]
@@ -615,7 +616,8 @@ class DDPM(pl.LightningModule):
 
         if self.validation_run_clip:
             if self.clip_encoder is None:
-                self.clip_encoder = CLIPEncoder(clip_version=self.clip_version, cache_dir=self.clip_cache_dir)
+                self.clip_encoder = CLIPEncoder(clip_version=self.clip_version, pretrained="./checkpoints/clip/open_clip_pytorch_model.bin",
+                                                 cache_dir=self.clip_cache_dir)
             for prompt, x_sampler in zip(prompts, x_samples):
                 # TODO(ahmadki): this is not efficient but clip model expects a PIL image,
                 # modify the clip encoder so we can use raw tensors instead

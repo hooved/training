@@ -18,6 +18,8 @@ class CLIPEncoder(nn.Module):
                 self.pretrained = 'laion2b_s12b_b42k'
             else:
                 self.pretrained = 'openai'
+        else:
+            self.pretrained = pretrained
 
         self.model, _, self.preprocess = open_clip.create_model_and_transforms(self.clip_version,
                                                                                pretrained=self.pretrained,
