@@ -131,7 +131,7 @@ class DDIMSampler(object):
         device = self.model.betas.device
         b = shape[0]
         if x_T is None:
-            img = torch.randn(shape, device=device)
+            img = torch.randn(shape, device=device) # (1, 4, 64, 64)
         else:
             img = x_T
 
@@ -169,7 +169,7 @@ class DDIMSampler(object):
                                       unconditional_guidance_scale=unconditional_guidance_scale,
                                       unconditional_conditioning=unconditional_conditioning,
                                       dynamic_threshold=dynamic_threshold)
-            img, pred_x0 = outs
+            img, pred_x0 = outs # (1,4,64,64), both
             if callback: callback(i)
             if img_callback: img_callback(pred_x0, i)
 

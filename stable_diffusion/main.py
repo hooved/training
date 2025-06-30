@@ -666,6 +666,7 @@ if __name__ == "__main__":
         mllogger.end(mllog_constants.INIT_STOP)
 
         # Run the training and validation
+        #opt.mode = "validate"
         if opt.mode=="train":
             try:
                 trainer.fit(model, data)
@@ -687,7 +688,7 @@ if __name__ == "__main__":
 
         status = mllog_constants.SUCCESS if fid_success and clip_success else mllog_constants.ABORTED
 
-    except Exception:
+    except Exception as e:
         # If there's an exception, debug it if opt.debug is true and the trainer's global rank is 0
         if opt.debug and trainer.global_rank == 0:
             try:

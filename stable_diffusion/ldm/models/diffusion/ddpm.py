@@ -580,9 +580,9 @@ class DDPM(pl.LightningModule):
             with self.ema_scope("validation"):
                 uc = None
                 if self.validation_scale != 1.0:
-                    uc = self.get_learned_conditioning(len(prompts) * [""])
-                c = self.get_learned_conditioning(prompts)
-                shape = [self.channels, self.image_size, self.image_size]
+                    uc = self.get_learned_conditioning(len(prompts) * [""]) # [1, 77, 1024]
+                c = self.get_learned_conditioning(prompts) # [1, 77, 1024]
+                shape = [self.channels, self.image_size, self.image_size] # [4, 64, 64]
                 samples, _ = self.sampler.sample(S=self.validation_sampler_steps,
                                                  conditioning=c,
                                                  batch_size=len(prompts),
