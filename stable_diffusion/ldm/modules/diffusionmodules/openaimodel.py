@@ -763,8 +763,11 @@ class UNetModel(nn.Module):
         assert (y is not None) == (
             self.num_classes is not None
         ), "must specify y if and only if the model is class-conditional"
+        # x: (1,4,64,64) float32, timesteps: (1,) int64, context: (1,77,1024) float32
+        # validation: B doubled for uncond/cond
         hs = []
         t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
+        # self.dtype: float16
         t_emb = t_emb.type(self.dtype)
         emb = self.time_embed(t_emb)
 

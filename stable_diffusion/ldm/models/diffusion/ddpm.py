@@ -562,9 +562,11 @@ class DDPM(pl.LightningModule):
 
         if self.use_scheduler:
             lr = self.optimizers().param_groups[0]['lr']
+            # 1.25e-13
+            # 1.2512487499999998e-10
             self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
-        return loss
+        return loss # scalar, float32
 
     # TODO(ahmadki): lightning will pad the last batch, which will cause duplicates
     # samples after all_gather, which might scew the FID and CLIP scores
@@ -1136,9 +1138,12 @@ class LatentDiffusion(DDPM):
         return mean_flat(kl_prior) / np.log(2.0)
 
     def p_losses(self, x_start, cond, t, noise=None):
-        noise = default(noise, lambda: torch.randn_like(x_start))
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
-        model_output = self.apply_model(x_noisy, t, cond)
+        # x_start: (1,4,64,64) float16
+        # cond: (1,77,1024) float32
+        # t: (1,) int64
+        noise = default(noise, lambda: torch.randn_like(x_start)) # (1,4,64,64) float16
+        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise) # (1,4,64,64) float32
+        model_output = self.apply_model(x_noisy, t, cond) # (1,4,64,64) bfloat16
 
         loss_dict = {}
         prefix = 'train' if self.training else 'val'
@@ -1707,5 +1712,5 @@ class DiffusionWrapper(pl.LightningModule):
         else:
             raise NotImplementedError()
 
-        return out
+        return out # (1,4,64,64) bfloat16
 
