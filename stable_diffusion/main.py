@@ -308,8 +308,8 @@ class CUDACallback(Callback):
 
     def on_train_epoch_start(self, trainer, pl_module):
         # Reset the memory use counter
-        #torch.cuda.reset_peak_memory_stats(trainer.strategy.root_device.index)
-        #torch.cuda.synchronize(trainer.strategy.root_device.index)
+        torch.cuda.reset_peak_memory_stats(trainer.strategy.root_device.index)
+        torch.cuda.synchronize(trainer.strategy.root_device.index)
         self.start_time = time.time()
 
     def on_train_epoch_end(self, trainer, pl_module):
@@ -670,7 +670,7 @@ if __name__ == "__main__":
         if opt.mode=="train":
             try:
                 trainer.fit(model, data)
-            except Exception:
+            except Exception as e:
                 melk()
                 raise
         elif opt.mode=="validate":

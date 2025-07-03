@@ -36,7 +36,7 @@ from ldm.modules.diffusionmodules.util import extract_into_tensor, make_beta_sch
 from ldm.modules.distributions.distributions import DiagonalGaussianDistribution, normal_kl
 from ldm.modules.ema import LitEma
 from ldm.modules.encoders.modules import *
-from ldm.util import count_params, default, exists, instantiate_from_config, isimage, ismap, log_txt_as_img, mean_flat
+from ldm.util import count_params, default, exists, instantiate_from_config, isimage, ismap, log_txt_as_img, mean_flat, cuda_ctx
 from omegaconf import ListConfig
 from torch.optim.lr_scheduler import LambdaLR
 from torchvision.utils import make_grid
@@ -893,17 +893,19 @@ class LatentDiffusion(DDPM):
         return self.scale_factor * z.half() if self.use_fp16 else self.scale_factor * z
 
     def get_learned_conditioning(self, c):
-        if self.cond_stage_forward is None:
-            if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
-                c = self.cond_stage_model.encode(c)
-                if isinstance(c, DiagonalGaussianDistribution):
-                    c = c.mode()
+        self.cond_stage_model.to("cpu")
+        with cuda_ctx(self.cond_stage_model):
+            if self.cond_stage_forward is None:
+                if hasattr(self.cond_stage_model, 'encode') and callable(self.cond_stage_model.encode):
+                    c = self.cond_stage_model.encode(c)
+                    if isinstance(c, DiagonalGaussianDistribution):
+                        c = c.mode()
+                else:
+                    c = self.cond_stage_model(c)
             else:
-                c = self.cond_stage_model(c)
-        else:
-            assert hasattr(self.cond_stage_model, self.cond_stage_forward)
-            c = getattr(self.cond_stage_model, self.cond_stage_forward)(c)
-        return c
+                assert hasattr(self.cond_stage_model, self.cond_stage_forward)
+                c = getattr(self.cond_stage_model, self.cond_stage_forward)(c)
+            return c
 
     def meshgrid(self, h, w):
         y = torch.arange(0, h).view(h, 1, 1).repeat(1, w, 1)
@@ -1678,6 +1680,7 @@ class DiffusionWrapper(pl.LightningModule):
         super().__init__()
         self.sequential_cross_attn = diff_model_config.pop("sequential_crossattn", False)
         self.diffusion_model = instantiate_from_config(diff_model_config)
+
         self.conditioning_key = conditioning_key
         assert self.conditioning_key in [None, 'concat', 'crossattn', 'hybrid', 'adm', 'hybrid-adm', 'crossattn-adm']
 
@@ -1712,5 +1715,7 @@ class DiffusionWrapper(pl.LightningModule):
         else:
             raise NotImplementedError()
 
-        return out # (1,4,64,64) bfloat16
+        #from safetensors.torch import save_file
+        #save_file({"x": x, "timesteps": timesteps, "context": context}, "datasets/tensors/unet_training_forward_out.safetensors")
+        return out # (1,4,64,64) float16
 

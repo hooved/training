@@ -16,7 +16,8 @@ from ldm.modules.diffusionmodules.util import (
     timestep_embedding,
 )
 from ldm.modules.attention import SpatialTransformer
-from ldm.util import exists
+from ldm.util import exists, cuda_ctx
+from torch.autograd.graph import save_on_cpu
 
 
 # dummy replace
@@ -760,31 +761,46 @@ class UNetModel(nn.Module):
         :param y: an [N] Tensor of labels, if class-conditional.
         :return: an [N x C x ...] Tensor of outputs.
         """
-        assert (y is not None) == (
-            self.num_classes is not None
-        ), "must specify y if and only if the model is class-conditional"
-        # x: (1,4,64,64) float32, timesteps: (1,) int64, context: (1,77,1024) float32
-        # validation: B doubled for uncond/cond
-        hs = []
-        t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
-        # self.dtype: float16
-        t_emb = t_emb.type(self.dtype)
-        emb = self.time_embed(t_emb)
+        self.to("cpu")
+        with save_on_cpu(pin_memory=True):
+            assert (y is not None) == (
+                self.num_classes is not None
+            ), "must specify y if and only if the model is class-conditional"
+            # x: (1,4,64,64) float32, timesteps: (1,) int64, context: (1,77,1024) float32
+            # inference/validation: B doubled for uncond/cond
+            #from safetensors.torch import save_file
+            #save_file({"x": x, "timesteps": timesteps, "context": context}, "datasets/tensors/unet_training_forward.safetensors")
 
-        if self.num_classes is not None:
-            assert y.shape[0] == x.shape[0]
-            emb = emb + self.label_emb(y)
 
-        h = x.type(self.dtype)
-        for module in self.input_blocks:
-            h = module(h, emb, context)
-            hs.append(h)
-        h = self.middle_block(h, emb, context)
-        for module in self.output_blocks:
-            h = th.cat([h, hs.pop()], dim=1)
-            h = module(h, emb, context)
-        h = h.type(x.dtype)
-        if self.predict_codebook_ids:
-            return self.id_predictor(h)
-        else:
-            return self.out(h)
+            hs = []
+            t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
+            # self.dtype: float16
+            t_emb = t_emb.type(self.dtype)
+        
+            with cuda_ctx(self.time_embed):
+                emb = self.time_embed(t_emb)
+
+            if self.num_classes is not None:
+                assert y.shape[0] == x.shape[0]
+                emb = emb + self.label_emb(y)
+
+            h = x.type(self.dtype)
+            for module in self.input_blocks:
+                with cuda_ctx(module):
+                    h = module(h, emb, context)
+                hs.append(h)
+
+            with cuda_ctx(self.middle_block):
+                h = self.middle_block(h, emb, context)
+
+            for module in self.output_blocks:
+                h = th.cat([h, hs.pop()], dim=1)
+                with cuda_ctx(module):
+                    h = module(h, emb, context)
+
+            h = h.type(x.dtype)
+            if self.predict_codebook_ids:
+                return self.id_predictor(h)
+            else:
+                with cuda_ctx(self.out):
+                    return self.out(h)

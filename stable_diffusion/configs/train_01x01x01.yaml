@@ -22,7 +22,7 @@ model:
     load_vae: True
     load_unet: False
     load_encoder: True
-    sampler_device: "cpu"
+    #sampler_device: "cpu"
 
     validation_config:
       sampler: "ddim" # plms, ddim, dpm
@@ -103,7 +103,7 @@ model:
       params:
         arch: "ViT-H-14"
         #version: "laion2b_s32b_b79k"
-        device: "cpu"
+        #device: "cpu"
         version: "/checkpoints/clip/open_clip_pytorch_model.bin"
         freeze: True
         layer: "penultimate"
@@ -116,7 +116,8 @@ data:
         target: ldm.data.webdatasets.build_dataloader
         params:
           #urls: /datasets/laion-400m/webdataset-moments-filtered/{00000..00831}.tar
-          urls: /datasets/laion-400m/webdataset-moments-filtered/{00000..00005}.tar
+          #urls: /datasets/laion-400m/webdataset-moments-filtered/{00000..00005}.tar
+          urls: /datasets/laion-400m/webdataset-moments-filtered/{00000..00000}.tar
           #batch_size: 8
           batch_size: 1
           shuffle: 1000
@@ -138,8 +139,8 @@ data:
 
 lightning:
   trainer:
-    #accelerator: 'gpu'
-    accelerator: 'cpu'
+    accelerator: 'gpu'
+    #accelerator: 'cpu'
     num_nodes: 1
     #devices: 8
     devices: 1

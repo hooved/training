@@ -7,6 +7,8 @@ import numpy as np
 from inspect import isfunction
 from PIL import Image, ImageDraw, ImageFont
 
+from contextlib import contextmanager
+
 
 def log_txt_as_img(wh, xc, size=10):
     # wh a tuple of (width, height)
@@ -86,3 +88,23 @@ def get_obj_from_str(string, reload=False):
         importlib.reload(module_imp)
     return getattr(importlib.import_module(module, package=None), cls)
 
+@contextmanager
+def cuda_ctx(*modules, device="cuda:0"):
+    orig_devs = []
+    for m in modules:
+        try:
+            orig_devs.append(next(m.parameters()).device)
+        except StopIteration:
+            try:
+                orig_devs.append(next(m.buffers()).device)
+            except StopIteration:
+                orig_devs.append("cpu")
+    
+    for m in modules:
+        m.to(device)
+    
+    try:
+        yield
+    finally:
+        for m, d in zip(modules, orig_devs):
+            m.to(d)
