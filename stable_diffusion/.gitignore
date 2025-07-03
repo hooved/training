@@ -1,2 +1,7 @@
 nogit/
 mlperf_compliance.log
+checkpoints/
+datasets/
+results/
+*.safetensors
+.hypothesis
