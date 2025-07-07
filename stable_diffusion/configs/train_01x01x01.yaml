@@ -60,7 +60,8 @@ model:
       target: ldm.modules.diffusionmodules.openaimodel.UNetModel
       params:
         use_checkpoint: False # gradient checkpointing
-        use_fp16: True
+        #use_fp16: True
+        use_fp16: False
         image_size: 32
         in_channels: 4
         out_channels: 4
@@ -144,7 +145,7 @@ lightning:
     num_nodes: 1
     #devices: 8
     devices: 1
-    precision: 16
+    #precision: 16
     logger: False
     log_every_n_steps: 5
     enable_progress_bar: False
