@@ -1715,7 +1715,6 @@ class DiffusionWrapper(pl.LightningModule):
         else:
             raise NotImplementedError()
 
-        #from safetensors.torch import save_file
-        #save_file({"x": x, "timesteps": timesteps, "context": context}, "datasets/tensors/unet_training_forward_out.safetensors")
+        #self.diffusion_model.to("cuda:0")
         return out # (1,4,64,64) float16
 

@@ -1,5 +1,6 @@
 from abc import abstractmethod
 import math
+from safetensors.torch import save_file
 
 import numpy as np
 import torch as th
@@ -14,6 +15,7 @@ from ldm.modules.diffusionmodules.util import (
     zero_module,
     normalization,
     timestep_embedding,
+    export_tensors,
 )
 from ldm.modules.attention import SpatialTransformer
 from ldm.util import exists, cuda_ctx
@@ -77,14 +79,15 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
     support it as an extra input.
     """
 
-    def forward(self, x, emb, context=None):
-        for layer in self:
+    def forward(self, x, emb, context=None, i:int|None=None, export_tensors:dict|None=None):
+        for j, layer in enumerate(self):
             if isinstance(layer, TimestepBlock):
                 x = layer(x, emb)
             elif isinstance(layer, SpatialTransformer):
                 x = layer(x, context)
             else:
                 x = layer(x)
+            if export_tensors: export_tensors[f"input_blocks.h.{i}.{j}"] = x.cpu()
         return x
 
 
@@ -253,6 +256,7 @@ class ResBlock(TimestepBlock):
 
 
     def _forward(self, x, emb):
+        export_tensors['resblocks'].append([])
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = in_rest(x)
@@ -260,10 +264,20 @@ class ResBlock(TimestepBlock):
             x = self.x_upd(x)
             h = in_conv(h)
         else:
-            h = self.in_layers(x)
-        emb_out = self.emb_layers(emb).type(h.dtype)
+            #h = self.in_layers(x)
+            h = x
+            for l in self.in_layers:
+                h = l(h)
+                export_tensors["resblocks"][-1].append(h.cpu())
+
+        #emb_out = self.emb_layers(emb).type(h.dtype)
+        emb_out = self.emb_layers[0](emb)
+        export_tensors["resblocks"][-1].append(emb_out.cpu())
+        emb_out = self.emb_layers[1](emb_out)
+
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
+        export_tensors["resblocks"][-1].append(emb_out.cpu())
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
             scale, shift = th.chunk(emb_out, 2, dim=1)
@@ -272,6 +286,7 @@ class ResBlock(TimestepBlock):
         else:
             h = h + emb_out
             h = self.out_layers(h)
+        export_tensors["resblocks"][-1].append(h.cpu())
         return self.skip_connection(x) + h
 
 
@@ -762,39 +777,51 @@ class UNetModel(nn.Module):
         :return: an [N x C x ...] Tensor of outputs.
         """
         self.to("cpu")
-        with save_on_cpu(pin_memory=True):
+        with th.no_grad():
+            #with save_on_cpu(pin_memory=False):
             assert (y is not None) == (
                 self.num_classes is not None
             ), "must specify y if and only if the model is class-conditional"
             # x: (1,4,64,64) float32, timesteps: (1,) int64, context: (1,77,1024) float32
             # inference/validation: B doubled for uncond/cond
-            #from safetensors.torch import save_file
-            #save_file({"x": x, "timesteps": timesteps, "context": context}, "datasets/tensors/unet_training_forward.safetensors")
 
+            state_dict = self.state_dict()
+            for k,v in state_dict.items():
+                # use non-zero starting values so we don't just get an all-zero output
+                with th.no_grad(): v.uniform_(-0.05, 0.05)
+                state_dict[k] = v.contiguous()
+            save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
+            #export_tensors = {"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()}
+            export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
 
             hs = []
             t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             # self.dtype: float16
             t_emb = t_emb.type(self.dtype)
+            export_tensors['t_emb'] = t_emb.cpu()
         
             with cuda_ctx(self.time_embed):
                 emb = self.time_embed(t_emb)
+            del t_emb
 
             if self.num_classes is not None:
                 assert y.shape[0] == x.shape[0]
                 emb = emb + self.label_emb(y)
 
+            export_tensors['emb'] = emb.cpu()
+
             h = x.type(self.dtype)
-            for module in self.input_blocks:
+            for i, module in enumerate(self.input_blocks):
                 with cuda_ctx(module):
-                    h = module(h, emb, context)
-                hs.append(h)
+                    h = module(h, emb, context, i=i, export_tensors=export_tensors)
+                hs.append(h.cpu())
+                export_tensors[f"input_blocks.h.{i}"] = h.cpu()
 
             with cuda_ctx(self.middle_block):
                 h = self.middle_block(h, emb, context)
 
             for module in self.output_blocks:
-                h = th.cat([h, hs.pop()], dim=1)
+                h = th.cat([h, hs.pop().to("cuda:0")], dim=1)
                 with cuda_ctx(module):
                     h = module(h, emb, context)
 
@@ -803,4 +830,13 @@ class UNetModel(nn.Module):
                 return self.id_predictor(h)
             else:
                 with cuda_ctx(self.out):
-                    return self.out(h)
+                    #return self.out(h)
+                    ret = self.out(h)
+
+                export_tensors["out"] = ret.cpu()
+                for i, block in enumerate(export_tensors['resblocks']):
+                    for j, t in enumerate(block):
+                        export_tensors[f'resblocks.{i}.{j}'] = t
+                del export_tensors['resblocks']
+                save_file(export_tensors, "datasets/tensors/unet_training_io.safetensors")
+                return ret
