@@ -7,6 +7,9 @@
 #
 # thanks!
 export_tensors = {"resblocks": []}
+def capture_tensor(tensor, name):
+    if export_tensors is not None:
+        export_tensors[name] = tensor.detach().cpu()
 
 import math
 import os
@@ -167,11 +170,11 @@ def timestep_embedding(timesteps, dim, max_period=10000, repeat_only=False):
         freqs = torch.exp(
             -math.log(max_period) * torch.arange(start=0, end=half, dtype=torch.float32) / half
         ).to(device=timesteps.device)
-        export_tensors[f"t_emb.freqs"] = freqs.cpu()
+        #export_tensors[f"t_emb.freqs"] = freqs.cpu()
         args = timesteps[:, None].float() * freqs[None]
         embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
-        export_tensors[f"t_emb.cos"] = torch.cos(args).cpu()
-        export_tensors[f"t_emb.sin"] = torch.sin(args).cpu()
+        #export_tensors[f"t_emb.cos"] = torch.cos(args).cpu()
+        #export_tensors[f"t_emb.sin"] = torch.sin(args).cpu()
         if dim % 2:
             embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
     else:

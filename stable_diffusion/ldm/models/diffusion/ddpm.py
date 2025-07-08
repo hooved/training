@@ -562,11 +562,9 @@ class DDPM(pl.LightningModule):
 
         if self.use_scheduler:
             lr = self.optimizers().param_groups[0]['lr']
-            # 1.25e-13
-            # 1.2512487499999998e-10
             self.log('lr_abs', lr, prog_bar=True, logger=True, on_step=True, on_epoch=False)
 
-        return loss # scalar, float32
+        return loss
 
     # TODO(ahmadki): lightning will pad the last batch, which will cause duplicates
     # samples after all_gather, which might scew the FID and CLIP scores
