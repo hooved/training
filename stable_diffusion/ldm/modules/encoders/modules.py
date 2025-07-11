@@ -80,9 +80,10 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
                 x = checkpoint(r, x, attn_mask)
             else:
                 if i == 0:
-                    globvars.sample_attn = True
-                    x = r(x, attn_mask=attn_mask, first=True)
-                    globvars.sample_attn = False
+                    x = r(x, attn_mask=attn_mask)
+                    #globvars.sample_attn = True
+                    #x = r(x, attn_mask=attn_mask, first=True)
+                    #globvars.sample_attn = False
                 else:
                     x = r(x, attn_mask=attn_mask)
         return x
