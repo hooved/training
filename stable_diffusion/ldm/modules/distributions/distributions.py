@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import globvars
 
 
 class AbstractDistribution:
@@ -33,7 +34,13 @@ class DiagonalGaussianDistribution(object):
             self.var = self.std = torch.zeros_like(self.mean).to(device=self.parameters.device)
 
     def sample(self):
+        #latent_randn_sampling = torch.randn(self.mean.shape).to(device=self.parameters.device)
+        #globvars.unet_inputs['latent_randn_sampling'] = latent_randn_sampling.cpu()
+        #globvars.unet_inputs['logvar'] = self.logvar.cpu()
+        #globvars.unet_inputs['std'] = self.std.cpu()
         x = self.mean + self.std * torch.randn(self.mean.shape).to(device=self.parameters.device)
+        #x = self.mean + self.std * latent_randn_sampling
+        #globvars.unet_inputs['x_penult'] = x.cpu()
         return x
 
     def kl(self, other=None):
