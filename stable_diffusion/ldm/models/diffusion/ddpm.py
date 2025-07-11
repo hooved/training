@@ -5,6 +5,8 @@ https://github.com/openai/improved-diffusion/blob/e94489283bb876ac1477d5dd7709bb
 https://github.com/CompVis/taming-transformers
 -- merci
 """
+import globvars
+from safetensors.torch import save_file
 
 import numpy as np
 import torch
@@ -554,6 +556,13 @@ class DDPM(pl.LightningModule):
                 if self.ucg_prng.choice(2, p=[1 - p, p]):
                     batch[k][i] = val
 
+        """
+        if batch_idx == 0:
+            state_dict = self.state_dict()
+            # this isn't registered as a parameter, it's just a plain torch.tensor
+            state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
+            save_file(state_dict, "checkpoints/training_init_model.safetensors")
+        """
         loss, loss_dict = self.shared_step(batch)
 
         self.log_dict(loss_dict, prog_bar=True, logger=True, on_step=True, on_epoch=True)
@@ -1087,7 +1096,14 @@ class LatentDiffusion(DDPM):
         return self.first_stage_model.moments(x)
 
     def shared_step(self, batch, **kwargs):
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        torch.set_float32_matmul_precision("highest")
         x, c = self.get_input(batch, self.first_stage_key)
+        #unet_inputs = {"batch": batch['npy'], "x": x, "c":c}
+        globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
+        save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
+        with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
         loss = self(x, c)
         return loss
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.checkpoint import checkpoint
 
 import open_clip
-
+import globvars
 
 class AbstractEncoder(nn.Module):
     def __init__(self):
@@ -61,11 +61,15 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
 
     def encode_with_transformer(self, text):
         x = self.model.token_embedding(text)  # [batch_size, n_ctx, d_model]
+        globvars.unet_inputs['x.0'] = x.cpu()
         x = x + self.model.positional_embedding
+        globvars.unet_inputs['x.1'] = x.cpu()
         x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.text_transformer_forward(x, attn_mask=self.model.attn_mask)
         x = x.permute(1, 0, 2)  # LND -> NLD
+        globvars.unet_inputs['x.2'] = x.cpu()
         x = self.model.ln_final(x)
+        globvars.unet_inputs['x.3'] = x.cpu()
         return x
 
     def text_transformer_forward(self, x: torch.Tensor, attn_mask=None):
@@ -75,7 +79,12 @@ class FrozenOpenCLIPEmbedder(AbstractEncoder):
             if self.model.transformer.grad_checkpointing and not torch.jit.is_scripting():
                 x = checkpoint(r, x, attn_mask)
             else:
-                x = r(x, attn_mask=attn_mask)
+                if i == 0:
+                    globvars.sample_attn = True
+                    x = r(x, attn_mask=attn_mask, first=True)
+                    globvars.sample_attn = False
+                else:
+                    x = r(x, attn_mask=attn_mask)
         return x
 
     def encode(self, text):
