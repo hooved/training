@@ -1,3 +1,4 @@
+import globvars
 from abc import abstractmethod
 import math
 from safetensors.torch import save_file
@@ -786,16 +787,14 @@ class UNetModel(nn.Module):
             # x: (1,4,64,64) float32, timesteps: (1,) int64, context: (1,77,1024) float32
             # inference/validation: B doubled for uncond/cond
 
-            """
             state_dict = self.state_dict()
             for k,v in state_dict.items():
                 # use non-zero starting values so we don't just get an all-zero output
                 with th.no_grad(): v.uniform_(-0.05, 0.05)
                 state_dict[k] = v.contiguous()
             save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
-            """
 
-            #export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
+            globvars.export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
             #for t,name in ((x, "x"), (timesteps, "timesteps"), (context, "context")):
                 #capture_tensor(t, name)
 
@@ -841,12 +840,12 @@ class UNetModel(nn.Module):
                     #return self.out(h)
                     ret = self.out(h)
 
-                #export_tensors["out"] = ret.cpu()
+                globvars.export_tensors["out"] = ret.cpu()
                 #capture_tensor(ret, "out")
 
                 #for i, block in enumerate(export_tensors['resblocks']):
                     #for j, t in enumerate(block):
                         #export_tensors[f'resblocks.{i}.{j}'] = t
                 #del export_tensors['resblocks']
-                #save_file(export_tensors, "datasets/tensors/unet_training_io.safetensors")
+                save_file(globvars.export_tensors, "datasets/tensors/unet_training_io.safetensors")
                 return ret

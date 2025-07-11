@@ -1101,9 +1101,9 @@ class LatentDiffusion(DDPM):
         torch.set_float32_matmul_precision("highest")
         x, c = self.get_input(batch, self.first_stage_key)
         #unet_inputs = {"batch": batch['npy'], "x": x, "c":c}
-        globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
-        save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
-        with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
+        #globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
+        #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
+        #with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
         loss = self(x, c)
         return loss
 
