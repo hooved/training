@@ -1105,7 +1105,7 @@ class LatentDiffusion(DDPM):
         x, c = self.get_input(batch, self.first_stage_key)
         #globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
-        #with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
+        with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
         loss = self(x, c)
         return loss
 
@@ -1196,6 +1196,15 @@ class LatentDiffusion(DDPM):
         loss += (self.original_elbo_weight * loss_vlb)
         loss_dict.update({f'{prefix}/loss': loss})
 
+        globvars.unet_inputs['x'] = x_start
+        globvars.unet_inputs['noise'] = noise
+        globvars.unet_inputs['x_noisy'] = x_noisy
+        globvars.unet_inputs['t'] = t
+        globvars.unet_inputs['cond'] = cond
+        globvars.unet_inputs['model_output'] = model_output
+        globvars.unet_inputs['target'] = target
+        globvars.unet_inputs['loss'] = loss
+        save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
         return loss, loss_dict
 
     def p_mean_variance(self,

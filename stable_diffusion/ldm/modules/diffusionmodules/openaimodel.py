@@ -787,6 +787,7 @@ class UNetModel(nn.Module):
             # x: (1,4,64,64) float32, timesteps: (1,) int64, context: (1,77,1024) float32
             # inference/validation: B doubled for uncond/cond
 
+            # capture model init values
             """
             state_dict = self.state_dict()
             for k,v in state_dict.items():
@@ -795,6 +796,12 @@ class UNetModel(nn.Module):
                 state_dict[k] = v.contiguous()
             save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
             globvars.export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
+            """
+            """
+            state_dict = self.state_dict()
+            for k,v in state_dict.items():
+                state_dict[k] = v.contiguous()
+            save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
             """
 
             hs = []
