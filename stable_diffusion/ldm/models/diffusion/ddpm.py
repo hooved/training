@@ -469,6 +469,9 @@ class DDPM(pl.LightningModule):
 
     def q_sample(self, x_start, t, noise=None):
         noise = default(noise, lambda: torch.randn_like(x_start))
+        #globvars.unet_inputs['noise'] = noise.cpu()
+        #globvars.unet_inputs['sqrt_alphas_cumprod'] = self.sqrt_alphas_cumprod.cpu()
+        #globvars.unet_inputs['sqrt_one_minus_alphas_cumprod'] = self.sqrt_one_minus_alphas_cumprod.cpu()
         return (extract_into_tensor(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start +
                 extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise)
 
@@ -1100,7 +1103,6 @@ class LatentDiffusion(DDPM):
         torch.backends.cudnn.allow_tf32 = False
         torch.set_float32_matmul_precision("highest")
         x, c = self.get_input(batch, self.first_stage_key)
-        #unet_inputs = {"batch": batch['npy'], "x": x, "c":c}
         #globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
         #with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
@@ -1159,6 +1161,8 @@ class LatentDiffusion(DDPM):
         # t: (1,) int64
         noise = default(noise, lambda: torch.randn_like(x_start)) # (1,4,64,64) float16
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise) # (1,4,64,64) float32
+        #globvars.unet_inputs.update({"x_noisy": x_noisy, "t": t})
+        #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
         model_output = self.apply_model(x_noisy, t, cond) # (1,4,64,64) bfloat16
 
         loss_dict = {}
