@@ -559,14 +559,23 @@ class DDPM(pl.LightningModule):
                 if self.ucg_prng.choice(2, p=[1 - p, p]):
                     batch[k][i] = val
 
-        """
         if batch_idx == 0:
             state_dict = self.state_dict()
             # this isn't registered as a parameter, it's just a plain torch.tensor
             state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
             save_file(state_dict, "checkpoints/training_init_model.safetensors")
-        """
+            del state_dict
         loss, loss_dict = self.shared_step(batch)
+        globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
+        if batch_idx == 10:
+            with open("checkpoints/eleven_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
+            for k,v in globvars.train_steps.items():
+                globvars.train_steps[k] = torch.stack(v)
+            save_file(globvars.train_steps, "checkpoints/eleven_training_steps.safetensors")
+            state_dict = self.state_dict()
+            # this isn't registered as a parameter, it's just a plain torch.tensor
+            state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
+            save_file(state_dict, "checkpoints/model_after_eleven_training_steps.safetensors")
 
         self.log_dict(loss_dict, prog_bar=True, logger=True, on_step=True, on_epoch=True)
 
@@ -1102,10 +1111,12 @@ class LatentDiffusion(DDPM):
         torch.backends.cuda.matmul.allow_tf32 = False
         torch.backends.cudnn.allow_tf32 = False
         torch.set_float32_matmul_precision("highest")
+        globvars.prompts.append(batch['txt'][0])
+        globvars.train_steps["batch_npy"].append(batch['npy'].squeeze(0).cpu())
         x, c = self.get_input(batch, self.first_stage_key)
         #globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
-        with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
+        #with open("datasets/tensors/cond.txt", "w", encoding="utf-8") as f: f.write(batch['txt'][0])
         loss = self(x, c)
         return loss
 
@@ -1196,15 +1207,17 @@ class LatentDiffusion(DDPM):
         loss += (self.original_elbo_weight * loss_vlb)
         loss_dict.update({f'{prefix}/loss': loss})
 
-        globvars.unet_inputs['x'] = x_start
-        globvars.unet_inputs['noise'] = noise
-        globvars.unet_inputs['x_noisy'] = x_noisy
-        globvars.unet_inputs['t'] = t
-        globvars.unet_inputs['cond'] = cond
-        globvars.unet_inputs['model_output'] = model_output
-        globvars.unet_inputs['target'] = target
-        globvars.unet_inputs['loss'] = loss
-        save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
+        globvars.train_steps["noise"].append(noise.cpu())
+        globvars.train_steps["t"].append(t.cpu())
+        #globvars.unet_inputs['x'] = x_start
+        #globvars.unet_inputs['noise'] = noise
+        #globvars.unet_inputs['x_noisy'] = x_noisy
+        #globvars.unet_inputs['t'] = t
+        #globvars.unet_inputs['cond'] = cond
+        #globvars.unet_inputs['model_output'] = model_output
+        #globvars.unet_inputs['target'] = target
+        #globvars.unet_inputs['loss'] = loss
+        #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
         return loss, loss_dict
 
     def p_mean_variance(self,
