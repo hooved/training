@@ -570,7 +570,7 @@ class DDPM(pl.LightningModule):
         globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
 
         #if batch_idx == 10:
-        if batch_idx == 0:
+        if batch_idx == 2:
         #if False:
             with open(f"checkpoints/{batch_idx + 1}_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
             for k,v in globvars.train_steps.items():

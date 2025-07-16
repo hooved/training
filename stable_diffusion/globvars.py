@@ -9,3 +9,4 @@ train_steps = {
   "loss": [],
 }
 prompts = []
+step = 0
