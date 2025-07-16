@@ -842,9 +842,10 @@ class UNetModel(nn.Module):
             if self.predict_codebook_ids:
                 return self.id_predictor(h)
             else:
-                with cuda_ctx(self.out):
-                    #return self.out(h)
-                    ret = self.out(h)
+                #with cuda_ctx(self.out):
+                    #ret = self.out(h)
+                self.out.to("cuda:0")
+                ret = self.out(h)
 
                 #globvars.export_tensors["out"] = ret.cpu()
                 ###for i, block in enumerate(export_tensors['resblocks']):

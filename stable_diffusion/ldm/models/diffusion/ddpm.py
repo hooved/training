@@ -565,17 +565,36 @@ class DDPM(pl.LightningModule):
             state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
             save_file(state_dict, "checkpoints/training_init_model.safetensors")
             del state_dict
+
         loss, loss_dict = self.shared_step(batch)
         globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
-        if batch_idx == 10:
-            with open("checkpoints/eleven_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
+
+        #if batch_idx == 10:
+        #if batch_idx == 0:
+        if False:
+            with open(f"checkpoints/{batch_idx + 1}_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
             for k,v in globvars.train_steps.items():
                 globvars.train_steps[k] = torch.stack(v)
-            save_file(globvars.train_steps, "checkpoints/eleven_training_steps.safetensors")
+            save_file(globvars.train_steps, f"checkpoints/{batch_idx + 1}_training_steps.safetensors")
             state_dict = self.state_dict()
             # this isn't registered as a parameter, it's just a plain torch.tensor
             state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
-            save_file(state_dict, "checkpoints/model_after_eleven_training_steps.safetensors")
+            save_file(state_dict, f"checkpoints/model_after_{batch_idx + 1}_training_steps.safetensors")
+
+        if True:
+            with open(f"checkpoints/{batch_idx + 1}_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
+            for k,v in globvars.train_steps.items():
+                globvars.train_steps[k] = torch.stack(v)
+            save_file(globvars.train_steps, f"checkpoints/{batch_idx + 1}_training_steps.safetensors")
+            loss.backward()
+            grads = {}
+            for k,v in dict(self.named_parameters()).items():
+                if k == "model.diffusion_model.out.2.bias":
+                    if v.grad is not None:
+                        grads[f"{k}.grad"] = v.grad.detach().contiguous()
+            #from safetensors.torch import save_file
+            save_file(grads, f"checkpoints/out.2.weight_after_1_training_steps.safetensors")
+            del grads
 
         self.log_dict(loss_dict, prog_bar=True, logger=True, on_step=True, on_epoch=True)
 
