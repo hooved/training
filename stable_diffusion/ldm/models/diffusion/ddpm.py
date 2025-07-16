@@ -570,18 +570,18 @@ class DDPM(pl.LightningModule):
         globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
 
         #if batch_idx == 10:
-        #if batch_idx == 0:
-        if False:
+        if batch_idx == 0:
+        #if False:
             with open(f"checkpoints/{batch_idx + 1}_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
             for k,v in globvars.train_steps.items():
                 globvars.train_steps[k] = torch.stack(v)
             save_file(globvars.train_steps, f"checkpoints/{batch_idx + 1}_training_steps.safetensors")
-            state_dict = self.state_dict()
+            #state_dict = self.state_dict()
             # this isn't registered as a parameter, it's just a plain torch.tensor
-            state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
-            save_file(state_dict, f"checkpoints/model_after_{batch_idx + 1}_training_steps.safetensors")
+            #state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
+            #save_file(state_dict, f"checkpoints/model_after_{batch_idx + 1}_training_steps.safetensors")
 
-        if True:
+        if False:
             with open(f"checkpoints/{batch_idx + 1}_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
             for k,v in globvars.train_steps.items():
                 globvars.train_steps[k] = torch.stack(v)
