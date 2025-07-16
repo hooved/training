@@ -559,7 +559,8 @@ class DDPM(pl.LightningModule):
                 if self.ucg_prng.choice(2, p=[1 - p, p]):
                     batch[k][i] = val
 
-        if batch_idx == 0:
+        #if batch_idx == 0:
+        if False:
             state_dict = self.state_dict()
             # this isn't registered as a parameter, it's just a plain torch.tensor
             state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
