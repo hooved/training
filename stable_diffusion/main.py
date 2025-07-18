@@ -666,7 +666,13 @@ if __name__ == "__main__":
         mllogger.end(mllog_constants.INIT_STOP)
 
         # Run the training and validation
-        #opt.mode = "validate"
+        
+        # For mathematical equivalence testing
+        torch.backends.cuda.matmul.allow_tf32 = False
+        torch.backends.cudnn.allow_tf32 = False
+        torch.set_float32_matmul_precision("highest")
+
+        opt.mode = "validate"
         if opt.mode=="train":
             try:
                 trainer.fit(model, data)

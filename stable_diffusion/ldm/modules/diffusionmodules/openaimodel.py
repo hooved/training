@@ -788,15 +788,14 @@ class UNetModel(nn.Module):
             # inference/validation: B doubled for uncond/cond
 
             # capture model init values
-            """
             state_dict = self.state_dict()
             for k,v in state_dict.items():
                 # use non-zero starting values so we don't just get an all-zero output
                 with th.no_grad(): v.uniform_(-0.05, 0.05)
                 state_dict[k] = v.contiguous()
-            save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
-            globvars.export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
-            """
+            save_file(state_dict, "checkpoints/unet_training_init_model.safetensors")
+            #globvars.export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
+            globvars.val.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
             """
             state_dict = self.state_dict()
             for k,v in state_dict.items():

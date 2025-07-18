@@ -568,15 +568,17 @@ class DDPM(pl.LightningModule):
             del state_dict
 
         loss, loss_dict = self.shared_step(batch)
-        globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
+        #globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
 
         #if batch_idx == 10:
         if batch_idx == 2:
         #if False:
+            """
             with open(f"checkpoints/{batch_idx + 1}_training_prompts.txt", "w", encoding="utf-8") as f: f.write("\n".join(globvars.prompts))
             for k,v in globvars.train_steps.items():
                 globvars.train_steps[k] = torch.stack(v)
             save_file(globvars.train_steps, f"checkpoints/{batch_idx + 1}_training_steps.safetensors")
+            """
             #state_dict = self.state_dict()
             # this isn't registered as a parameter, it's just a plain torch.tensor
             #state_dict["cond_stage_model.model.attn_mask"] = self.cond_stage_model.model.attn_mask
@@ -624,6 +626,7 @@ class DDPM(pl.LightningModule):
                     uc = self.get_learned_conditioning(len(prompts) * [""]) # [1, 77, 1024]
                 c = self.get_learned_conditioning(prompts) # [1, 77, 1024]
                 shape = [self.channels, self.image_size, self.image_size] # [4, 64, 64]
+                #globvars.val.update({"prompt": prompts[0], "c": c.clone().cpu(), "uc": uc.clone().cpu()})
                 samples, _ = self.sampler.sample(S=self.validation_sampler_steps,
                                                  conditioning=c,
                                                  batch_size=len(prompts),
@@ -1128,11 +1131,10 @@ class LatentDiffusion(DDPM):
         return self.first_stage_model.moments(x)
 
     def shared_step(self, batch, **kwargs):
-        torch.backends.cuda.matmul.allow_tf32 = False
-        torch.backends.cudnn.allow_tf32 = False
-        torch.set_float32_matmul_precision("highest")
+        """
         globvars.prompts.append(batch['txt'][0])
         globvars.train_steps["batch_npy"].append(batch['npy'].squeeze(0).cpu())
+        """
         x, c = self.get_input(batch, self.first_stage_key)
         #globvars.unet_inputs.update({"batch": batch['npy'], "x": x, "c":c})
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
@@ -1227,8 +1229,9 @@ class LatentDiffusion(DDPM):
         loss += (self.original_elbo_weight * loss_vlb)
         loss_dict.update({f'{prefix}/loss': loss})
 
-        globvars.train_steps["noise"].append(noise.cpu())
-        globvars.train_steps["t"].append(t.cpu())
+        #globvars.train_steps["noise"].append(noise.cpu())
+        #globvars.train_steps["t"].append(t.cpu())
+
         #globvars.unet_inputs['x'] = x_start
         #globvars.unet_inputs['noise'] = noise
         #globvars.unet_inputs['x_noisy'] = x_noisy
