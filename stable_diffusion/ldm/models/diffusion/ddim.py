@@ -134,7 +134,7 @@ class DDIMSampler(object):
         b = shape[0]
         if x_T is None:
             img = torch.randn(shape, device=device) # (1, 4, 64, 64)
-            globvars.val["latent_randn"] = img.clone().cpu()
+            #globvars.val["latent_randn"] = img.clone().cpu()
         else:
             img = x_T
 
@@ -173,8 +173,10 @@ class DDIMSampler(object):
                                       unconditional_conditioning=unconditional_conditioning,
                                       dynamic_threshold=dynamic_threshold)
             img, pred_x0 = outs # (1,4,64,64), both
+            """
             globvars.val["x_prev"] = img.clone().cpu()
             save_file(globvars.val, "checkpoints/val.safetensors")
+            """
             if callback: callback(i)
             if img_callback: img_callback(pred_x0, i)
 

@@ -626,19 +626,23 @@ class DDPM(pl.LightningModule):
                     uc = self.get_learned_conditioning(len(prompts) * [""]) # [1, 77, 1024]
                 c = self.get_learned_conditioning(prompts) # [1, 77, 1024]
                 shape = [self.channels, self.image_size, self.image_size] # [4, 64, 64]
-                #globvars.val.update({"prompt": prompts[0], "c": c.clone().cpu(), "uc": uc.clone().cpu()})
-                samples, _ = self.sampler.sample(S=self.validation_sampler_steps,
-                                                 conditioning=c,
-                                                 batch_size=len(prompts),
-                                                 shape=shape,
-                                                 verbose=False,
-                                                 unconditional_guidance_scale=self.validation_scale,
-                                                 unconditional_conditioning=uc,
-                                                 eta=self.validation_ddim_eta,
-                                                 x_T=x_T)
+                if False:
+                    samples, _ = self.sampler.sample(S=self.validation_sampler_steps,
+                                                    conditioning=c,
+                                                    batch_size=len(prompts),
+                                                    shape=shape,
+                                                    verbose=False,
+                                                    unconditional_guidance_scale=self.validation_scale,
+                                                    unconditional_conditioning=uc,
+                                                    eta=self.validation_ddim_eta,
+                                                    x_T=x_T)
 
+                samples = torch.randn((1,4,64,64), device="cuda:0")
+                globvars.val["samples"] = samples.detach().cpu()
                 x_samples = self.decode_first_stage(samples)
                 x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                globvars.val["x_samples"] = x_samples.detach().cpu()
+                save_file(globvars.val, "checkpoints/val.safetensors")
 
         if self.validation_save_images:
             output_dir = os.path.join(self.validation_base_output_dir, f"epoch={self.current_epoch:06}-step={self.global_step:09}")
