@@ -637,12 +637,8 @@ class DDPM(pl.LightningModule):
                                                     eta=self.validation_ddim_eta,
                                                     x_T=x_T)
 
-                samples = torch.randn((1,4,64,64), device="cuda:0")
-                globvars.val["samples"] = samples.detach().cpu()
-                x_samples = self.decode_first_stage(samples)
-                x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
-                globvars.val["x_samples"] = x_samples.detach().cpu()
-                save_file(globvars.val, "checkpoints/val.safetensors")
+                    x_samples = self.decode_first_stage(samples)
+                    x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
         if self.validation_save_images:
             output_dir = os.path.join(self.validation_base_output_dir, f"epoch={self.current_epoch:06}-step={self.global_step:09}")
@@ -659,7 +655,11 @@ class DDPM(pl.LightningModule):
                                              weights_url=self.inception_weights_url,
                                              model_dir=self.inception_cache_dir).cuda()
                 self.inception.eval()
+            x_samples = torch.randn((1,3,512,512), device="cuda:0")
+            globvars.val["x_samples"] = x_samples.detach().cpu()
             pred = self.inception(x_samples)[0].squeeze(3).squeeze(2)
+            globvars.val["pred"] = pred.detach().cpu()
+            save_file(globvars.val, "checkpoints/val.safetensors")
             self.validation_inecption_activations.append(pred)
 
         if self.validation_run_clip:
