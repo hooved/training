@@ -648,6 +648,10 @@ class DDPM(pl.LightningModule):
                 img = Image.fromarray(x_sample.astype(np.uint8))
                 img.save(os.path.join(output_dir, f"{fname}.png"))
 
+        self.validation_run_fid = False
+        x_samples = torch.rand((1,3,512,512), device="cuda:0")
+        globvars.val["x_samples"] = x_samples.detach().cpu()
+
         if self.validation_run_fid:
             if self.inception is None:
                 block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[2048]
@@ -655,11 +659,7 @@ class DDPM(pl.LightningModule):
                                              weights_url=self.inception_weights_url,
                                              model_dir=self.inception_cache_dir).cuda()
                 self.inception.eval()
-            x_samples = torch.randn((1,3,512,512), device="cuda:0")
-            globvars.val["x_samples"] = x_samples.detach().cpu()
             pred = self.inception(x_samples)[0].squeeze(3).squeeze(2)
-            globvars.val["pred"] = pred.detach().cpu()
-            save_file(globvars.val, "checkpoints/val.safetensors")
             self.validation_inecption_activations.append(pred)
 
         if self.validation_run_clip:
@@ -671,6 +671,11 @@ class DDPM(pl.LightningModule):
                 # modify the clip encoder so we can use raw tensors instead
                 img = self.to_pil_image(x_sampler)
                 score = self.clip_encoder.get_clip_score(prompt, img)
+
+                globvars.val["score"] = score.detach().cpu()
+                with open("checkpoints/val_prompt.txt", "w", encoding="utf-8") as f: f.write(prompt)
+                save_file(globvars.val, "checkpoints/val.safetensors")
+
                 self.validation_clip_scores.append(score)
 
     def on_validation_epoch_end(self):

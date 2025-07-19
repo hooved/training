@@ -151,25 +151,16 @@ class InceptionV3(nn.Module):
                               size=(299, 299),
                               mode='bilinear',
                               align_corners=False)
-            globvars.val["inception.0"] = x.detach().cpu()
-            globvars.val["blocks.0.0.conv.weight"] = self.blocks[0][0].conv.weight.detach().cpu()
 
         if self.normalize_input:
             x = 2 * x - 1  # Scale from range (0, 1) to range (-1, 1)
 
-        globvars.val[f"inception.1.0.0.0"] = self.blocks[0][0].conv(x).detach().cpu()
-        globvars.val[f"inception.1.0.0.1"] = self.blocks[0][0].bn(
-            self.blocks[0][0].conv(x)
-        ).detach().cpu()
         for idx, block in enumerate(self.blocks):
-            #x = block(x)
-            for i, b in enumerate(block):
-                x = b(x)
-                globvars.val[f"inception.1.{idx}.{i}"] = x.detach().cpu()
+            x = block(x)
+
             if idx in self.output_blocks:
                 outp.append(x)
 
-            #globvars.val[f"inception.1.{idx}"] = x.detach().cpu()
             if idx == self.last_needed_block:
                 break
 
