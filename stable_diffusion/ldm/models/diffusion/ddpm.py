@@ -648,7 +648,6 @@ class DDPM(pl.LightningModule):
                 img = Image.fromarray(x_sample.astype(np.uint8))
                 img.save(os.path.join(output_dir, f"{fname}.png"))
 
-        self.validation_run_fid = False
         x_samples = torch.rand((1,3,512,512), device="cuda:0")
         globvars.val["x_samples"] = x_samples.detach().cpu()
 
@@ -659,8 +658,11 @@ class DDPM(pl.LightningModule):
                                              weights_url=self.inception_weights_url,
                                              model_dir=self.inception_cache_dir).cuda()
                 self.inception.eval()
-            pred = self.inception(x_samples)[0].squeeze(3).squeeze(2)
+            pred = self.inception(x_samples)[0].squeeze(3).squeeze(2) # 1,2048
             self.validation_inecption_activations.append(pred)
+
+        self.on_validation_epoch_end()
+        pause = 1
 
         if self.validation_run_clip:
             if self.clip_encoder is None:
@@ -672,27 +674,43 @@ class DDPM(pl.LightningModule):
                 img = self.to_pil_image(x_sampler)
                 score = self.clip_encoder.get_clip_score(prompt, img)
 
-                globvars.val["score"] = score.detach().cpu()
-                with open("checkpoints/val_prompt.txt", "w", encoding="utf-8") as f: f.write(prompt)
-                save_file(globvars.val, "checkpoints/val.safetensors")
+                #globvars.val["score"] = score.detach().cpu()
+                #with open("checkpoints/val_prompt.txt", "w", encoding="utf-8") as f: f.write(prompt)
+                #save_file(globvars.val, "checkpoints/val.safetensors")
 
                 self.validation_clip_scores.append(score)
 
     def on_validation_epoch_end(self):
+        fid_scores = torch.randn((30000,2048), device="cuda:0") * 0.3841 + 0.1759
+        fid_scores = fid_scores.clamp(min=0, max=5.1505)
+        fid_scores = list(fid_scores.chunk(30000))
+        self.validation_inecption_activations = fid_scores
+
+        clip_scores = list(torch.rand((30000,1), device="cuda:0").chunk(30000))
+        self.validation_clip_scores = clip_scores
+
+
         if self.validation_run_fid:
             inception_activations = torch.cat(self.validation_inecption_activations, 0)
             inception_activations = self.all_gather(inception_activations)
             inception_activations = inception_activations.view(-1, inception_activations.shape[2])
+            globvars.val['inception_activations'] = inception_activations.detach().cpu()
 
             # Ground truth
             if self.m1 is None or self.s1 is None:
                 self.m1, self.s1 = compute_statistics_of_path(self.fid_gt_path, self.inception, 50, 2048, self.device, 4)
+            globvars.val['m1'] = torch.tensor(self.m1)
+            globvars.val['s1'] = torch.tensor(self.s1)
 
             # Generated images
             m2 = np.mean(inception_activations.detach().cpu().numpy(), axis=0)
             s2 = np.cov(inception_activations.detach().cpu().numpy(), rowvar=False)
+            globvars.val['m2'] = torch.tensor(m2)
+            globvars.val['s2'] = torch.tensor(s2)
 
             fid_value = calculate_frechet_distance(self.m1, self.s1, m2, s2)
+
+            globvars.val['fid_value'] = torch.tensor(fid_value)
 
             self.log("validation/fid", fid_value)
             self.validation_inecption_activations.clear()  # free memory
@@ -701,7 +719,10 @@ class DDPM(pl.LightningModule):
             clip_scores = torch.cat(self.validation_clip_scores, 0)
             clip_scores = self.all_gather(clip_scores)
             clip_scores = clip_scores.view(-1, clip_scores.shape[2])
+            globvars.val['clip_scores'] = clip_scores.detach().cpu()
             clip_score = np.mean(clip_scores.detach().cpu().numpy())
+            globvars.val['final_clip_score'] = torch.tensor(clip_score)
+            save_file(globvars.val, "checkpoints/val.safetensors")
 
             self.log("validation/clip", clip_score)
             self.validation_clip_scores.clear()  # free memory
