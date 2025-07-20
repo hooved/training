@@ -1,7 +1,5 @@
 import torch
 import torch.nn as nn
-import globvars
-from safetensors.torch import save_file
 
 import open_clip
 from PIL import Image
@@ -35,7 +33,6 @@ class CLIPEncoder(nn.Module):
     @torch.no_grad()
     def get_clip_score(self, text, image):
         image = self.preprocess(image).unsqueeze(0).to(self.device)
-        save_file(globvars.val, "checkpoints/val.safetensors")
         image_features = self.model.encode_image(image).float()
         image_features /= image_features.norm(dim=-1, keepdim=True)
 
