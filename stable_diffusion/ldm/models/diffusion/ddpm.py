@@ -626,19 +626,18 @@ class DDPM(pl.LightningModule):
                     uc = self.get_learned_conditioning(len(prompts) * [""]) # [1, 77, 1024]
                 c = self.get_learned_conditioning(prompts) # [1, 77, 1024]
                 shape = [self.channels, self.image_size, self.image_size] # [4, 64, 64]
-                if False:
-                    samples, _ = self.sampler.sample(S=self.validation_sampler_steps,
-                                                    conditioning=c,
-                                                    batch_size=len(prompts),
-                                                    shape=shape,
-                                                    verbose=False,
-                                                    unconditional_guidance_scale=self.validation_scale,
-                                                    unconditional_conditioning=uc,
-                                                    eta=self.validation_ddim_eta,
-                                                    x_T=x_T)
+                samples, _ = self.sampler.sample(S=self.validation_sampler_steps,
+                                                conditioning=c,
+                                                batch_size=len(prompts),
+                                                shape=shape,
+                                                verbose=False,
+                                                unconditional_guidance_scale=self.validation_scale,
+                                                unconditional_conditioning=uc,
+                                                eta=self.validation_ddim_eta,
+                                                x_T=x_T)
 
-                    x_samples = self.decode_first_stage(samples)
-                    x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
+                x_samples = self.decode_first_stage(samples)
+                x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
         if self.validation_save_images:
             output_dir = os.path.join(self.validation_base_output_dir, f"epoch={self.current_epoch:06}-step={self.global_step:09}")
@@ -648,8 +647,8 @@ class DDPM(pl.LightningModule):
                 img = Image.fromarray(x_sample.astype(np.uint8))
                 img.save(os.path.join(output_dir, f"{fname}.png"))
 
-        x_samples = torch.rand((1,3,512,512), device="cuda:0")
-        globvars.val["x_samples"] = x_samples.detach().cpu()
+        #x_samples = torch.rand((1,3,512,512), device="cuda:0")
+        #globvars.val["x_samples"] = x_samples.detach().cpu()
 
         if self.validation_run_fid:
             if self.inception is None:
@@ -661,8 +660,8 @@ class DDPM(pl.LightningModule):
             pred = self.inception(x_samples)[0].squeeze(3).squeeze(2) # 1,2048
             self.validation_inecption_activations.append(pred)
 
-        self.on_validation_epoch_end()
-        pause = 1
+        #self.on_validation_epoch_end()
+        #pause = 1
 
         if self.validation_run_clip:
             if self.clip_encoder is None:
@@ -694,23 +693,23 @@ class DDPM(pl.LightningModule):
             inception_activations = torch.cat(self.validation_inecption_activations, 0)
             inception_activations = self.all_gather(inception_activations)
             inception_activations = inception_activations.view(-1, inception_activations.shape[2])
-            globvars.val['inception_activations'] = inception_activations.detach().cpu()
+            #globvars.val['inception_activations'] = inception_activations.detach().cpu()
 
             # Ground truth
             if self.m1 is None or self.s1 is None:
                 self.m1, self.s1 = compute_statistics_of_path(self.fid_gt_path, self.inception, 50, 2048, self.device, 4)
-            globvars.val['m1'] = torch.tensor(self.m1)
-            globvars.val['s1'] = torch.tensor(self.s1)
+            #globvars.val['m1'] = torch.tensor(self.m1)
+            #globvars.val['s1'] = torch.tensor(self.s1)
 
             # Generated images
             m2 = np.mean(inception_activations.detach().cpu().numpy(), axis=0)
             s2 = np.cov(inception_activations.detach().cpu().numpy(), rowvar=False)
-            globvars.val['m2'] = torch.tensor(m2)
-            globvars.val['s2'] = torch.tensor(s2)
+            #globvars.val['m2'] = torch.tensor(m2)
+            #globvars.val['s2'] = torch.tensor(s2)
 
             fid_value = calculate_frechet_distance(self.m1, self.s1, m2, s2)
 
-            globvars.val['fid_value'] = torch.tensor(fid_value)
+            #globvars.val['fid_value'] = torch.tensor(fid_value)
 
             self.log("validation/fid", fid_value)
             self.validation_inecption_activations.clear()  # free memory
@@ -719,10 +718,10 @@ class DDPM(pl.LightningModule):
             clip_scores = torch.cat(self.validation_clip_scores, 0)
             clip_scores = self.all_gather(clip_scores)
             clip_scores = clip_scores.view(-1, clip_scores.shape[2])
-            globvars.val['clip_scores'] = clip_scores.detach().cpu()
+            #globvars.val['clip_scores'] = clip_scores.detach().cpu()
             clip_score = np.mean(clip_scores.detach().cpu().numpy())
-            globvars.val['final_clip_score'] = torch.tensor(clip_score)
-            save_file(globvars.val, "checkpoints/val.safetensors")
+            #globvars.val['final_clip_score'] = torch.tensor(clip_score)
+            #save_file(globvars.val, "checkpoints/val.safetensors")
 
             self.log("validation/clip", clip_score)
             self.validation_clip_scores.clear()  # free memory

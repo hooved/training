@@ -801,7 +801,7 @@ class UNetModel(nn.Module):
             """
             state_dict = self.state_dict()
             for k,v in state_dict.items():
-                state_dict[k] = v.contiguous()
+                state_dict[k] = v.detach().contiguous().cpu()
             save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
             """
 
