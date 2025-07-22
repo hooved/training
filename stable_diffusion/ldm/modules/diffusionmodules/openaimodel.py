@@ -258,7 +258,6 @@ class ResBlock(TimestepBlock):
 
 
     def _forward(self, x, emb):
-        #export_tensors['resblocks'].append([])
         if self.updown:
             in_rest, in_conv = self.in_layers[:-1], self.in_layers[-1]
             h = in_rest(x)
@@ -266,20 +265,10 @@ class ResBlock(TimestepBlock):
             x = self.x_upd(x)
             h = in_conv(h)
         else:
-            #h = self.in_layers(x)
-            h = x
-            for l in self.in_layers:
-                h = l(h)
-                #export_tensors["resblocks"][-1].append(h.cpu())
-
-        #emb_out = self.emb_layers(emb).type(h.dtype)
-        emb_out = self.emb_layers[0](emb)
-        #export_tensors["resblocks"][-1].append(emb_out.cpu())
-        emb_out = self.emb_layers[1](emb_out)
-
+            h = self.in_layers(x)
+        emb_out = self.emb_layers(emb).type(h.dtype)
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
-        #export_tensors["resblocks"][-1].append(emb_out.cpu())
         if self.use_scale_shift_norm:
             out_norm, out_rest = self.out_layers[0], self.out_layers[1:]
             scale, shift = th.chunk(emb_out, 2, dim=1)
@@ -288,7 +277,6 @@ class ResBlock(TimestepBlock):
         else:
             h = h + emb_out
             h = self.out_layers(h)
-        #export_tensors["resblocks"][-1].append(h.cpu())
         return self.skip_connection(x) + h
 
 
@@ -809,8 +797,6 @@ class UNetModel(nn.Module):
             t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             # self.dtype: float16
             t_emb = t_emb.type(self.dtype)
-            #export_tensors['t_emb'] = t_emb.cpu()
-            #capture_tensor(t_emb, "t_emb")
         
             with cuda_ctx(self.time_embed):
                 emb = self.time_embed(t_emb)
@@ -820,16 +806,11 @@ class UNetModel(nn.Module):
                 assert y.shape[0] == x.shape[0]
                 emb = emb + self.label_emb(y)
 
-            #export_tensors['emb'] = emb.cpu()
-            #capture_tensor(emb, "emb")
-
             h = x.type(self.dtype)
             for i, module in enumerate(self.input_blocks):
                 with cuda_ctx(module):
                     h = module(h, emb, context, i=i)
                 hs.append(h.cpu())
-                #export_tensors[f"input_blocks.h.{i}"] = h.cpu()
-                #capture_tensor(h, f"input_blocks.h.{i}.{j}")
 
             with cuda_ctx(self.middle_block):
                 h = self.middle_block(h, emb, context)
