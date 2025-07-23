@@ -90,7 +90,7 @@ class TimestepEmbedSequential(nn.Sequential, TimestepBlock):
                 x = layer(x)
             #if export_tensors: export_tensors[f"input_blocks.h.{i}.{j}"] = x.cpu()
             #capture_tensor(x, f"input_blocks.h.{i}.{j}")
-        return x
+        return x # 16
 
 
 class Upsample(nn.Module):
@@ -265,8 +265,8 @@ class ResBlock(TimestepBlock):
             x = self.x_upd(x)
             h = in_conv(h)
         else:
-            h = self.in_layers(x)
-        emb_out = self.emb_layers(emb).type(h.dtype)
+            h = self.in_layers(x) # x: float32, [0] 32, [1] 32, [2] 16
+        emb_out = self.emb_layers(emb).type(h.dtype) # emb: 16, [0]: 16, [1]: 16
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]
         if self.use_scale_shift_norm:
@@ -275,9 +275,9 @@ class ResBlock(TimestepBlock):
             h = out_norm(h) * (1 + scale) + shift
             h = out_rest(h)
         else:
-            h = h + emb_out
-            h = self.out_layers(h)
-        return self.skip_connection(x) + h
+            h = h + emb_out # 16
+            h = self.out_layers(h) # h 16, [0] 32, [1] 32, [0] 32, [3] 16
+        return self.skip_connection(x) + h # 16
 
 
 class AttentionBlock(nn.Module):
@@ -793,6 +793,7 @@ class UNetModel(nn.Module):
             save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
             """
 
+            # x: float32
             hs = []
             t_emb = timestep_embedding(timesteps, self.model_channels, repeat_only=False)
             # self.dtype: float16
@@ -820,7 +821,7 @@ class UNetModel(nn.Module):
                 with cuda_ctx(module):
                     h = module(h, emb, context)
 
-            h = h.type(x.dtype)
+            h = h.type(x.dtype) # 16->32
             if self.predict_codebook_ids:
                 return self.id_predictor(h)
             else:
@@ -835,4 +836,4 @@ class UNetModel(nn.Module):
                         ###export_tensors[f'resblocks.{i}.{j}'] = t
                 ###del export_tensors['resblocks']
                 #save_file(globvars.export_tensors, "datasets/tensors/unet_training_io.safetensors")
-                return ret
+                return ret # 16

@@ -1225,7 +1225,7 @@ class LatentDiffusion(DDPM):
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise) # (1,4,64,64) float32
         #globvars.unet_inputs.update({"x_noisy": x_noisy, "t": t})
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
-        model_output = self.apply_model(x_noisy, t, cond) # (1,4,64,64) bfloat16
+        model_output = self.apply_model(x_noisy, t, cond) # (1,4,64,64) float16
 
         loss_dict = {}
         prefix = 'train' if self.training else 'val'
@@ -1235,16 +1235,16 @@ class LatentDiffusion(DDPM):
         elif self.parameterization == "eps":
             target = noise
         elif self.parameterization == "v":
-            target = self.get_v(x_start, noise, t)
+            target = self.get_v(x_start, noise, t) # float32
         else:
             raise NotImplementedError()
 
-        loss_simple = self.get_loss(model_output, target, mean=False).mean([1, 2, 3])
+        loss_simple = self.get_loss(model_output, target, mean=False).mean([1, 2, 3]) # float32
         loss_dict.update({f'{prefix}/loss_simple': loss_simple.mean()})
 
         logvar_t = self.logvar.to(self.device)[t]
 
-        loss = loss_simple / torch.exp(logvar_t) + logvar_t
+        loss = loss_simple / torch.exp(logvar_t) + logvar_t # float32
         # loss = loss_simple / torch.exp(self.logvar) + self.logvar
         if self.learn_logvar:
             loss_dict.update({f'{prefix}/loss_gamma': loss.mean()})
@@ -1270,7 +1270,7 @@ class LatentDiffusion(DDPM):
         #globvars.unet_inputs['target'] = target
         #globvars.unet_inputs['loss'] = loss
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
-        return loss, loss_dict
+        return loss, loss_dict # float32
 
     def p_mean_variance(self,
                         x,
@@ -1744,6 +1744,8 @@ class LatentDiffusion(DDPM):
         mllogger.event(mllog_constants.OPT_ADAMW_WEIGHT_DECAY, value=0.01)
         mllogger.event(mllog_constants.OPT_BASE_LR, value=lr)
         opt = torch.optim.AdamW(params, lr=lr)
+        # TODO: revert; this is needed for precision: 16 amp, for optimizer.step to not complain about multiple devices
+        #opt = torch.optim.AdamW(params, lr=lr, capturable=False, foreach=False)
 
         if self.use_scheduler:
             assert 'target' in self.scheduler_config

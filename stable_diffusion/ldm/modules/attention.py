@@ -70,7 +70,7 @@ class FeedForward(nn.Module):
         )
 
     def forward(self, x):
-        return self.net(x)
+        return self.net(x) # x 32, .0 16, .2 16
 
 
 def zero_module(module):
@@ -160,14 +160,14 @@ class CrossAttention(nn.Module):
     def forward(self, x, context=None, mask=None):
         h = self.heads
 
-        q = self.to_q(x)
+        q = self.to_q(x) # x 32, -> 16
         context = default(context, x)
         k = self.to_k(context)
-        v = self.to_v(context)
+        v = self.to_v(context) # 16
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
 
-        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale
+        sim = einsum('b i d, b j d -> b i j', q, k) * self.scale # 16
         del q, k
 
         if exists(mask):
@@ -177,11 +177,11 @@ class CrossAttention(nn.Module):
             sim.masked_fill_(~mask, max_neg_value)
 
         # attention, what we cannot get enough of
-        sim = sim.softmax(dim=-1)
+        sim = sim.softmax(dim=-1) # 16 -> 32
 
-        out = einsum('b i j, b j d -> b i d', sim, v)
+        out = einsum('b i j, b j d -> b i d', sim, v) # -> 16
         out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
-        return self.to_out(out)
+        return self.to_out(out) # -> 16
 
 
 class MemoryEfficientCrossAttention(nn.Module):
@@ -260,10 +260,10 @@ class BasicTransformerBlock(nn.Module):
         return checkpoint(self._forward, (x, context), self.parameters(), self.checkpoint)
 
     def _forward(self, x, context=None):
-        x = self.attn1(self.norm1(x), context=context if self.disable_self_attn else None) + x
+        x = self.attn1(self.norm1(x), context=context if self.disable_self_attn else None) + x # x 16, norm1 32 -> 16
         x = self.attn2(self.norm2(x), context=context) + x
         x = self.ff(self.norm3(x)) + x
-        return x
+        return x # 16
 
 
 class SpatialTransformer(nn.Module):
@@ -311,22 +311,22 @@ class SpatialTransformer(nn.Module):
 
     def forward(self, x, context=None):
         # note: if no context is given, cross-attention defaults to self-attention
-        if not isinstance(context, list):
+        if not isinstance(context, list): # x 16, context 32
             context = [context]
         b, c, h, w = x.shape
         x_in = x
-        x = self.norm(x)
+        x = self.norm(x) # 32
         if not self.use_linear:
             x = self.proj_in(x)
         x = rearrange(x, 'b c h w -> b (h w) c').contiguous()
         if self.use_linear:
-            x = self.proj_in(x)
+            x = self.proj_in(x) # 16
         for i, block in enumerate(self.transformer_blocks):
-            x = block(x, context=context[i])
+            x = block(x, context=context[i]) # x 16, -> 16
         if self.use_linear:
             x = self.proj_out(x)
         x = rearrange(x, 'b (h w) c -> b c h w', h=h, w=w).contiguous()
         if not self.use_linear:
             x = self.proj_out(x)
-        return x + x_in
+        return x + x_in # 16
 

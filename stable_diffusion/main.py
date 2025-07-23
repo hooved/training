@@ -677,7 +677,7 @@ if __name__ == "__main__":
             try:
                 trainer.fit(model, data)
             except Exception as e:
-                melk()
+                #melk()
                 raise
         elif opt.mode=="validate":
             trainer.validate(model, data)
