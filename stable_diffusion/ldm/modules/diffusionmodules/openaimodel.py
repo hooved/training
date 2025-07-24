@@ -265,7 +265,7 @@ class ResBlock(TimestepBlock):
             x = self.x_upd(x)
             h = in_conv(h)
         else:
-            h = self.in_layers(x) # x: float32, [0] 32, [1] 32, [2] 16
+            h = self.in_layers(x) # x: float16, [0] 32, [1] 32, [2] 16
         emb_out = self.emb_layers(emb).type(h.dtype) # emb: 16, [0]: 16, [1]: 16
         while len(emb_out.shape) < len(h.shape):
             emb_out = emb_out[..., None]

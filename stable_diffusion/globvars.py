@@ -15,3 +15,6 @@ step = 0
 # Validation
 val = {
 }
+
+# mixed precision
+mixed = {}

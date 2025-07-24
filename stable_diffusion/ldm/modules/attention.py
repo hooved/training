@@ -1,3 +1,5 @@
+import globvars
+from safetensors.torch import save_file
 from inspect import isfunction
 import math
 import torch
@@ -158,12 +160,16 @@ class CrossAttention(nn.Module):
         )
 
     def forward(self, x, context=None, mask=None):
+        globvars.mixed["x"] = x.detach().cpu()
         h = self.heads
 
         q = self.to_q(x) # x 32, -> 16
         context = default(context, x)
         k = self.to_k(context)
         v = self.to_v(context) # 16
+        globvars.mixed["q"] = q.detach().cpu()
+        globvars.mixed["k"] = k.detach().cpu()
+        globvars.mixed["v"] = v.detach().cpu()
 
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> (b h) n d', h=h), (q, k, v))
 
@@ -176,12 +182,20 @@ class CrossAttention(nn.Module):
             mask = repeat(mask, 'b j -> (b h) () j', h=h)
             sim.masked_fill_(~mask, max_neg_value)
 
+        globvars.mixed["sim.0"] = sim.detach().cpu()
         # attention, what we cannot get enough of
         sim = sim.softmax(dim=-1) # 16 -> 32
+        globvars.mixed["sim.1"] = sim.detach().cpu()
 
         out = einsum('b i j, b j d -> b i d', sim, v) # -> 16
+        globvars.mixed["out.0"] = out.detach().cpu()
         out = rearrange(out, '(b h) n d -> b n (h d)', h=h)
-        return self.to_out(out) # -> 16
+        globvars.mixed["out.1"] = out.detach().cpu()
+        #return self.to_out(out) # -> 16
+        ret = self.to_out(out) # -> 16
+        globvars.mixed["attn.ret"] = ret.detach().cpu()
+        save_file(globvars.mixed, "checkpoints/mixed.safetensors")
+        return ret
 
 
 class MemoryEfficientCrossAttention(nn.Module):
