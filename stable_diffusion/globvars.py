@@ -18,3 +18,6 @@ val = {
 
 # mixed precision
 mixed = {}
+
+capture_layernorm=True
+capture_groupnorm=True

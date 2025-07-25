@@ -782,7 +782,6 @@ class UNetModel(nn.Module):
                 with th.no_grad(): v.uniform_(-0.05, 0.05)
                 state_dict[k] = v.contiguous()
             save_file(state_dict, "checkpoints/unet_training_init_model.safetensors")
-            #globvars.export_tensors.update({"x": x.cpu(), "timesteps": timesteps.cpu(), "context": context.cpu()})
             globvars.mixed.update({"x": x.detach().cpu(), "timesteps": timesteps.detach().cpu(), "context": context.detach().cpu()})
 
             """
@@ -825,6 +824,10 @@ class UNetModel(nn.Module):
                 return self.id_predictor(h)
             else:
                 with cuda_ctx(self.out):
+                    globvars.mixed["pre_groupnorm"] = h.detach().cpu()
+                    globvars.mixed["groupnorm.weight"] = self.out[0].weight.detach().cpu()
+                    globvars.mixed["groupnorm.bias"] = self.out[0].bias.detach().cpu()
+                    globvars.mixed["post_groupnorm"] = self.out[0:1](h).detach().cpu()
                     ret = self.out(h)
                 #self.out.to("cuda:0")
                 #ret = self.out(h)
