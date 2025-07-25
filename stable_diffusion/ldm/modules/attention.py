@@ -183,8 +183,13 @@ class CrossAttention(nn.Module):
             sim.masked_fill_(~mask, max_neg_value)
 
         #globvars.mixed["sim.0"] = sim.detach().cpu()
+        if globvars.capture_softmax:
+            globvars.mixed["pre_softmax"] = sim.detach().cpu()
         # attention, what we cannot get enough of
         sim = sim.softmax(dim=-1) # 16 -> 32
+        if globvars.capture_softmax:
+            globvars.mixed["post_softmax"] = sim.detach().cpu()
+            globvars.capture_softmax=False
         #globvars.mixed["sim.1"] = sim.detach().cpu()
 
         out = einsum('b i j, b j d -> b i d', sim, v) # -> 16
@@ -274,12 +279,12 @@ class BasicTransformerBlock(nn.Module):
         return checkpoint(self._forward, (x, context), self.parameters(), self.checkpoint)
 
     def _forward(self, x, context=None):
-        if globvars.capture_layernorm:
-            globvars.mixed["pre_layernorm"] = x.detach().cpu()
-            globvars.mixed["layernorm.weight"] = self.norm1.weight.detach().cpu()
-            globvars.mixed["layernorm.bias"] = self.norm1.bias.detach().cpu()
-            globvars.mixed["post_layernorm"] = self.norm1(x).detach().cpu()
-            globvars.capture_layernorm=False
+        #if globvars.capture_layernorm:
+            #globvars.mixed["pre_layernorm"] = x.detach().cpu()
+            #globvars.mixed["layernorm.weight"] = self.norm1.weight.detach().cpu()
+            #globvars.mixed["layernorm.bias"] = self.norm1.bias.detach().cpu()
+            #globvars.mixed["post_layernorm"] = self.norm1(x).detach().cpu()
+            #globvars.capture_layernorm=False
 
         x = self.attn1(self.norm1(x), context=context if self.disable_self_attn else None) + x # x 16, norm1 32 -> 16
         x = self.attn2(self.norm2(x), context=context) + x

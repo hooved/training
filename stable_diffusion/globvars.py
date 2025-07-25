@@ -21,3 +21,4 @@ mixed = {}
 
 capture_layernorm=True
 capture_groupnorm=True
+capture_softmax=True
