@@ -404,6 +404,8 @@ class DDPM(pl.LightningModule):
     def predict_start_from_z_and_v(self, x_t, t, v):
         # self.register_buffer('sqrt_alphas_cumprod', to_torch(np.sqrt(alphas_cumprod)))
         # self.register_buffer('sqrt_one_minus_alphas_cumprod', to_torch(np.sqrt(1. - alphas_cumprod)))
+        print(extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape).flatten().item())
+        print(extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape).flatten().item())
         return (
                 extract_into_tensor(self.sqrt_alphas_cumprod, t, x_t.shape) * x_t -
                 extract_into_tensor(self.sqrt_one_minus_alphas_cumprod, t, x_t.shape) * v
@@ -653,6 +655,8 @@ class DDPM(pl.LightningModule):
 
                 with open("checkpoints/val0prompt.txt", "w") as f: f.write(batch['caption'][0])
                 out = {}
+                out['uc'] = uc
+                out['c'] = c
                 out['init_latent'] = globvars.val['init_latent'][0]
                 out['samples'] = samples
                 save_file(out, "checkpoints/val0.safetensors")

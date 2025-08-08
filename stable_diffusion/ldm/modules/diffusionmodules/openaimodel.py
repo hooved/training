@@ -776,6 +776,7 @@ class UNetModel(nn.Module):
             # inference/validation: B doubled for uncond/cond
 
             # capture model init values
+            """
             state_dict = self.state_dict()
             for k,v in state_dict.items():
                 # use non-zero starting values so we don't just get an all-zero output
@@ -783,6 +784,7 @@ class UNetModel(nn.Module):
                 state_dict[k] = v.contiguous()
             save_file(state_dict, "checkpoints/unet_training_init_model.safetensors")
             globvars.mixed.update({"x": x.detach().cpu(), "timesteps": timesteps.detach().cpu(), "context": context.detach().cpu()})
+            """
 
             """
             state_dict = self.state_dict()
@@ -837,6 +839,6 @@ class UNetModel(nn.Module):
                         ###export_tensors[f'resblocks.{i}.{j}'] = t
                 ###del export_tensors['resblocks']
 
-                globvars.mixed["ret"] = ret.detach().cpu()
-                save_file(globvars.mixed, "checkpoints/mixed.safetensors")
+                #globvars.mixed["ret"] = ret.detach().cpu()
+                #save_file(globvars.mixed, "checkpoints/mixed.safetensors")
                 return ret # 16

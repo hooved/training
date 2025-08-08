@@ -1,6 +1,6 @@
 """SAMPLING ONLY."""
 import globvars
-from safetensors.torch import save_file
+from safetensors.torch import save_file, load_file
 
 import torch
 import numpy as np
@@ -133,8 +133,10 @@ class DDIMSampler(object):
         device = self.model.betas.device
         b = shape[0]
         if x_T is None:
-            img = torch.randn(shape, device=device) # (1, 4, 64, 64)
-            globvars.val['init_latent'].append(img)
+            #img = torch.randn(shape, device=device) # (1, 4, 64, 64)
+            sd = load_file("checkpoints/val0.safetensors")
+            img = sd['init_latent'].to("cuda:0")
+            globvars.val['init_latent'].append(img.clone().cpu())
             #globvars.val["latent_randn"] = img.clone().cpu()
         else:
             img = x_T
@@ -218,7 +220,17 @@ class DDIMSampler(object):
                     c_in.append(torch.cat([unconditional_conditioning[i], c[i]]))
             else:
                 c_in = torch.cat([unconditional_conditioning, c])
+            #globvars.val['x_in'] = x_in.clone().cpu()
+            #globvars.val['t_in'] = t_in.clone().cpu()
+            #globvars.val['c_in'] = c_in.clone().cpu()
             model_uncond, model_t = self.model.apply_model(x_in, t_in, c_in).chunk(2)
+            #globvars.val['model_uncond'] = model_uncond.clone().cpu()
+            #globvars.val['model_t'] = model_t.clone().cpu()
+            #out = {}
+            #for k in ("x_in", "t_in", "c_in", "model_uncond", "model_t"):
+                #out[k] = globvars.val[k]
+            #out['init_latent'] = globvars.val['init_latent'][0]
+            #save_file(out, "checkpoints/val1.safetensors")
             model_output = model_uncond + unconditional_guidance_scale * (model_t - model_uncond)
 
         if self.model.parameterization == "v":
@@ -244,6 +256,7 @@ class DDIMSampler(object):
         if self.model.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
         else:
+            print(f"t: {t.item()}")
             pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
 
         if quantize_denoised:
@@ -258,6 +271,13 @@ class DDIMSampler(object):
         if noise_dropout > 0.:
             noise = torch.nn.functional.dropout(noise, p=noise_dropout)
         x_prev = a_prev.sqrt() * pred_x0 + dir_xt + noise
+        #globvars.val['x_prev'] = x_prev.clone().cpu()
+        #out = {}
+        #for k in ('x_in', 't_in', 'c_in', 'model_uncond', 'model_t', 'x_prev'):
+            #out[k] = globvars.val[k]
+        #out['init_latent'] = globvars.val['init_latent'][0]
+        #save_file(out, "checkpoints/val1.safetensors")
+        print(x_prev.flatten()[0:10].tolist())
         return x_prev, pred_x0
 
     @torch.no_grad()
