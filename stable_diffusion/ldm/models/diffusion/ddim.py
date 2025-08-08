@@ -134,6 +134,7 @@ class DDIMSampler(object):
         b = shape[0]
         if x_T is None:
             img = torch.randn(shape, device=device) # (1, 4, 64, 64)
+            globvars.val['init_latent'].append(img)
             #globvars.val["latent_randn"] = img.clone().cpu()
         else:
             img = x_T

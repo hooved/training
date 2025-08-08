@@ -13,6 +13,7 @@ prompts = []
 step = 0
 
 # Validation
+step_num=0
 val = {
 }
 

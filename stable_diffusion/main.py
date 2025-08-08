@@ -672,7 +672,7 @@ if __name__ == "__main__":
         torch.backends.cudnn.allow_tf32 = False
         torch.set_float32_matmul_precision("highest")
 
-        #opt.mode = "validate"
+        opt.mode = "validate"
         if opt.mode=="train":
             try:
                 trainer.fit(model, data)

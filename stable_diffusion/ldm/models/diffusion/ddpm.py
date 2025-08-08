@@ -6,7 +6,7 @@ https://github.com/CompVis/taming-transformers
 -- merci
 """
 import globvars
-from safetensors.torch import save_file
+from safetensors.torch import save_file, load_file
 
 import numpy as np
 import torch
@@ -613,6 +613,21 @@ class DDPM(pl.LightningModule):
     # samples after all_gather, which might scew the FID and CLIP scores
     @torch.no_grad()
     def validation_step(self, batch, batch_idx):
+        print(f"globvars.step_num={globvars.step_num}")
+        if globvars.step_num==0:
+            self.model.diffusion_model.to("cpu")
+            sd = load_file("checkpoints/training_checkpoints/08051713/run_eval/for_comparison.safetensors", device="cuda:0")
+            sd = {k.replace("model.diffusion_model.", ""):v for k,v in sd.items() if k.startswith("model.diffusion_model.")}
+            self.model.diffusion_model.load_state_dict(sd)
+            #self.model.diffusion_model.to("cuda:0")
+            print("loaded state dict")
+            globvars.val['caption'] = []
+            globvars.val['init_latent'] = []
+            globvars.val['samples'] = []
+            #globvars.val['fid'] = []
+            #globvars.val['clip'] = []
+        globvars.val['caption'].append(batch['caption'][0])
+
         prompts = batch[self.prompt_key]
         fnames = batch[self.image_fname_key]
 
@@ -636,6 +651,12 @@ class DDPM(pl.LightningModule):
                                                 eta=self.validation_ddim_eta,
                                                 x_T=x_T)
 
+                with open("checkpoints/val0prompt.txt", "w") as f: f.write(batch['caption'][0])
+                out = {}
+                out['init_latent'] = globvars.val['init_latent'][0]
+                out['samples'] = samples
+                save_file(out, "checkpoints/val0.safetensors")
+                globvars.val["x_samples"].append(x_samples)
                 x_samples = self.decode_first_stage(samples)
                 x_samples = torch.clamp((x_samples + 1.0) / 2.0, min=0.0, max=1.0)
 
@@ -678,6 +699,7 @@ class DDPM(pl.LightningModule):
                 #save_file(globvars.val, "checkpoints/val.safetensors")
 
                 self.validation_clip_scores.append(score)
+        globvars.step_num += 1
 
     def on_validation_epoch_end(self):
         fid_scores = torch.randn((30000,2048), device="cuda:0") * 0.3841 + 0.1759
