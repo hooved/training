@@ -133,9 +133,9 @@ class DDIMSampler(object):
         device = self.model.betas.device
         b = shape[0]
         if x_T is None:
-            #img = torch.randn(shape, device=device) # (1, 4, 64, 64)
-            sd = load_file("checkpoints/val0.safetensors")
-            img = sd['init_latent'].to("cuda:0")
+            img = torch.randn(shape, device=device) # (1, 4, 64, 64)
+            #sd = load_file("checkpoints/val0.safetensors")
+            #img = sd['init_latent'].to("cuda:0")
             globvars.val['init_latent'].append(img.clone().cpu())
             #globvars.val["latent_randn"] = img.clone().cpu()
         else:
@@ -256,7 +256,7 @@ class DDIMSampler(object):
         if self.model.parameterization != "v":
             pred_x0 = (x - sqrt_one_minus_at * e_t) / a_t.sqrt()
         else:
-            print(f"t: {t.item()}")
+            #print(f"t: {t.item()}")
             pred_x0 = self.model.predict_start_from_z_and_v(x, t, model_output)
 
         if quantize_denoised:
@@ -277,7 +277,7 @@ class DDIMSampler(object):
             #out[k] = globvars.val[k]
         #out['init_latent'] = globvars.val['init_latent'][0]
         #save_file(out, "checkpoints/val1.safetensors")
-        print(x_prev.flatten()[0:10].tolist())
+        #print(x_prev.flatten()[0:10].tolist())
         return x_prev, pred_x0
 
     @torch.no_grad()
