@@ -183,13 +183,13 @@ class CrossAttention(nn.Module):
             sim.masked_fill_(~mask, max_neg_value)
 
         #globvars.mixed["sim.0"] = sim.detach().cpu()
-        if globvars.capture_softmax:
-            globvars.mixed["pre_softmax"] = sim.detach().cpu()
+        #if globvars.capture_softmax:
+            #globvars.mixed["pre_softmax"] = sim.detach().cpu()
         # attention, what we cannot get enough of
         sim = sim.softmax(dim=-1) # 16 -> 32
-        if globvars.capture_softmax:
-            globvars.mixed["post_softmax"] = sim.detach().cpu()
-            globvars.capture_softmax=False
+        #if globvars.capture_softmax:
+            #globvars.mixed["post_softmax"] = sim.detach().cpu()
+            #globvars.capture_softmax=False
         #globvars.mixed["sim.1"] = sim.detach().cpu()
 
         out = einsum('b i j, b j d -> b i d', sim, v) # -> 16

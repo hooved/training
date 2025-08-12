@@ -1,7 +1,7 @@
 import globvars
 from abc import abstractmethod
 import math
-from safetensors.torch import save_file
+from safetensors.torch import save_file, load_file
 
 import numpy as np
 import torch as th
@@ -789,9 +789,11 @@ class UNetModel(nn.Module):
             """
             state_dict = self.state_dict()
             for k,v in state_dict.items():
-                state_dict[k] = v.detach().contiguous().cpu()
-            save_file(state_dict, "datasets/tensors/unet_training_init_model.safetensors")
+                state_dict[k] = v.detach().cpu()
+            save_file(state_dict, "checkpoints/train0_init_unet.safetensors")
             """
+            state_dict = load_file("checkpoints/train0_init_unet.safetensors")
+            self.load_state_dict(state_dict)
 
             # x: float32
             hs = []

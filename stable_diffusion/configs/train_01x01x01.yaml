@@ -116,6 +116,7 @@ data:
           urls: /datasets/laion-400m/webdataset-moments-filtered/{00000..00000}.tar
           #batch_size: 8
           batch_size: 1
+          #batch_size: 2
           shuffle: 1000
           partial: False
           keep_only_keys: ["npy", "txt"]

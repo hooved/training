@@ -569,6 +569,10 @@ class DDPM(pl.LightningModule):
             save_file(state_dict, "checkpoints/training_init_model.safetensors")
             del state_dict
 
+        if batch_idx == 0:
+            globvars.train['batch_npy'] = batch['npy'].detach().cpu()
+            with open("checkpoints/train0_prompt0.txt", "w") as f: f.write("\n".join(batch['txt']))
+
         loss, loss_dict = self.shared_step(batch)
         #globvars.train_steps["loss"].append(loss.unsqueeze(0).cpu())
 
@@ -1253,6 +1257,7 @@ class LatentDiffusion(DDPM):
 
     def forward(self, x, c, *args, **kwargs):
         t = torch.randint(0, self.num_timesteps, (x.shape[0],), device=self.device).long()
+        globvars.train['t'] = t.detach().cpu()
         if self.model.conditioning_key is not None:
             assert c is not None
             if self.cond_stage_trainable:
@@ -1302,6 +1307,7 @@ class LatentDiffusion(DDPM):
         # cond: (1,77,1024) float32
         # t: (1,) int64
         noise = default(noise, lambda: torch.randn_like(x_start)) # (1,4,64,64) float16
+        globvars.train['noise'] = noise.detach().cpu()
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise) # (1,4,64,64) float32
         #globvars.unet_inputs.update({"x_noisy": x_noisy, "t": t})
         #save_file(globvars.unet_inputs, "datasets/tensors/unet_inputs.safetensors")
